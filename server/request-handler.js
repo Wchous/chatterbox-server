@@ -11,7 +11,10 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+var results = {results: [{message: 'hello world'}]}
 
+
+var url = require('url');
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
   //
@@ -29,30 +32,42 @@ var requestHandler = function(request, response) {
   // console.logs in your code.
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
 
+  var urlParts = url.parse(request.url);
+  
+  var route = routes[urlParts.pathname];
+  
+  if (route) {
+    route(request, response)
+  } else {
+    sendResponse(response, 'Not Found', 404)
+  }
+  
   // The outgoing status.
-  var statusCode = 200;
+  // var statusCode = 200;
 
   // See the note below about CORS headers.
-  var headers = defaultCorsHeaders;
+  //var headers = defaultCorsHeaders;
 
   // Tell the client we are sending them plain text.
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = 'text/plain';
+  // headers['Content-Type'] = 'text/plain';
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
-  response.writeHead(statusCode, headers);
+  // response.writeHead(statusCode, headers);
 
   // Make sure to always call response.end() - Node may not send
   // anything back to the client until you do. The string you pass to
   // response.end() will be the body of the response - i.e. what shows
   // up in the browser.
+
+
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end('Hello, World!');
+  // response.end('hello world');
 };
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
@@ -64,10 +79,46 @@ var requestHandler = function(request, response) {
 //
 // Another way to get around this restriction is to serve you chat
 // client from this domain by setting up static file serving.
+
+var singleRequestHandler = function (request, response) {
+  var action = actions[request.method];
+  console.log(action, request.method)
+  if (action) {
+    action(request, response);
+  } else {
+    sendResponse(response, 'Not Found', 404);
+  }
+}
+
+var actions = {
+  'GET': function(request, response) {
+    sendResponse(response, results)
+  },
+  'POST': function(request, response) {
+    results.results.push(request.data)
+  }
+}
+
+var routes = {
+  '/classes/messages': singleRequestHandler
+};
+
 var defaultCorsHeaders = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type, accept',
   'access-control-max-age': 10 // Seconds.
 };
+
+var sendResponse = function(response, data, statusCode){
+  statusCode = statusCode || 200;
+  response.writeHead(statusCode, defaultCorsHeaders);
+  response.end(JSON.stringify(data))
+};
+
+exports.requestHandler = requestHandler;
+
+
+
+
 
