@@ -1,8 +1,12 @@
 var url = require('url');
+var querystring = require('querystring')
+var fs = require('fs');
+
+var filename = '../../chatterClient/client/index.html'
 
 var defaultCorsHeaders = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PUT, DELETE',
+  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type, accept',
   'access-control-max-age': 10 // Seconds.
 };
@@ -12,13 +16,32 @@ var results = {"results":[{"objectId":"wlYrCX99Vc","username":"dan","text":"firs
 var sendResponse = function(response, data, statusCode){
   statusCode = statusCode || 200;
   response.writeHead(statusCode, defaultCorsHeaders);
-  response.end(JSON.stringify(data));
+  
+  // var sendBack = {};
+  // fs.writeFile(filename,sendBack,function(error){
+  //   if(error) throw error
+  //   console.log('html created')
+  // })
+  // console.log(sendBack)
+  var styler = ""
+  fs.readFile(filename, (err, data)=> {
+    if (err) throw err;
+    
+    styler += data
+    
+  // response.on("end", function (data){fs.readFile(filename,function(error,html){
+  // if(error) throw error
+  // response.writeHead(200,{'Content-Type': 'text/html'})
+  // response.write(html)
+  // })
+  // })
+  response.end(response.write(styler), JSON.stringify(data));
+  });
 };
 
 var actions = {
-  'GET': function(request, response) {
+  'GET': function(request, response, results) {
     sendResponse(response, results);
-    console.log(typeof results)
   },
   'POST': function(request, response) {
     var body = '';
@@ -42,11 +65,32 @@ var singleRequestHandler = function (request, response) {
   }
 };
 
+var searchResults = function(results, searchParams) {
+  var sortedData = [];
+  results.results.forEach(function(element){
+    console.log(element)
+    if (element.username === searchParams) {
+      sortedData.push(element)
+      
+    }
+  })
+  return sortedData
 
+}
 var routes = {
   '/': singleRequestHandler,
   '/classes/messages': singleRequestHandler,
-  '/classes/messages/where': singleRequestHandler
+  '/classes/messages/username': function(request, response) {
+    var method = request.method;
+    var handler = actions[method];
+    var param = querystring.parse(request.url)
+    for (var i in param) {
+      param = param[i]
+    }
+    console.log(param)
+    var sortedData = searchResults(results,param);
+    handler(request, response, sortedData)
+  }
 };
 
 // var searchParams = {
